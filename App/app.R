@@ -11,7 +11,7 @@ seqm = read_excel(paste(dirname(getwd()),'/seqm_user.xlsx',sep = ''))
 seqm_detail = read_excel(paste(dirname(getwd()),'/seqm_user_detail.xlsx',sep = ''))
 
 # Convert comma to dots
-seqm$Pontos = sapply(seqm$Pontos, function(x) {return (str_replace(x,',','.'))})
+seqm$Pontos = sapply(seqm$Pontos, function(x) {return (str_replace(str_replace(x,'\\.',''),',','.'))})
 
 # Convert to numeric
 seqm$Pontos = as.numeric(seqm$Pontos)
@@ -38,15 +38,7 @@ header <- dashboardHeader(title='Company')
 
 # Dashboard sidebar  
 sidebar <- dashboardSidebar(
-  selectizeInput(
-    inputId = "search_id"
-    , choices = sort(seqm$Proprietario)
-    , label = "Search a person"
-    , options = list(
-      placeholder = "Search.."
-      , onInitialize = I('function() { this.setValue(""); }')
-    )
-  )
+ uiOutput('search_id_output')
 )
 
 seqm %>% arrange(desc(Pontos))
@@ -147,16 +139,28 @@ render_window <- function(output,score_box.title,city_box.title,state_box.title,
 }
 
 # Creating server
-server <- function(input, output) {
+server <- function(input, output, session) {
   
-  # Renderiza a tela
+  # Render Window
   render_window(output,"Pontos","Cidade","UF","Melhor Cavalo","Quantidade de Cavalos",data.frame(Animal=character(),Sexo=character(),Nascimento=character(),Pontos=character()))
-  
+
+  # Render the search input on sidebar
+  output$search_id_output <- renderUI({
+    selectizeInput(
+      inputId = "search_id"
+      , choices = sort(seqm$Proprietario)
+      , label = "Search a person"
+      , options = list(
+        placeholder = "Search.."
+        , onInitialize = I('function() { this.setValue(""); }')
+      )
+    )
+  })
+
   observeEvent(input$search_id,{
     if(input$search_id != ""){
-
-      # Renderiza a tela
-      render_window(output,(seqm %>% filter(Proprietario == input$search_id))$Pontos,(seqm %>% filter(Proprietario == input$search_id))$Cidade,(seqm %>% filter(Proprietario == input$search_id))$UF,head(filter_dataframe(input$search_id),1)$Animal,nrow(filter_dataframe(input$search_id)),filter_dataframe(input$search_id))
+        # Render Window
+        render_window(output,(seqm %>% filter(Proprietario == input$search_id))$Pontos,(seqm %>% filter(Proprietario == input$search_id))$Cidade,(seqm %>% filter(Proprietario == input$search_id))$UF,head(filter_dataframe(input$search_id),1)$Animal,nrow(filter_dataframe(input$search_id)),filter_dataframe(input$search_id))
     }
   })
 }
